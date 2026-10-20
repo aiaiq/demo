@@ -143,13 +143,13 @@ const exportActions = {
   mrfPackage() {
     const { units, ...domain } = exportOpts;
     const regions = buildFlowRegions(wasm, fan, domain);
-    download(simscaleZip(overlapFaces(regions), { scale: scale(), units }), `simscale_mrf_${units}.zip`, 'application/zip');
+    download(simscaleZip(overlapFaces(regions), { scale: scale() }), `simscale_mrf_${units}.zip`, 'application/zip');
     for (const key of ['zone', 'flowRegion', 'flowStatic', 'flowRotating']) regions[key].delete();
   },
   mrfConformal() {
     const { units, ...domain } = exportOpts;
     const regions = buildFlowRegions(wasm, fan, domain);
-    download(simscaleZip(conformalFaces(regions), { scale: scale(), units }), `simscale_mrf_conformal_${units}.zip`, 'application/zip');
+    download(simscaleZip(conformalFaces(regions), { scale: scale() }), `simscale_mrf_conformal_${units}.zip`, 'application/zip');
     for (const key of ['zone', 'flowRegion', 'flowStatic', 'flowRotating']) regions[key].delete();
   },
   partsPackage() {
