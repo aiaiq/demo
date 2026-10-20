@@ -4,9 +4,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import GUI from 'lil-gui';
 import Module from 'manifold-3d';
 import { DEFAULTS, buildFan } from './fan.js';
-import { DOMAIN_DEFAULTS, buildFlowRegions, conformalFaces, overlapFaces, simscaleZip } from './simscale.js';
+import { DOMAIN_DEFAULTS, buildFlowRegions, simscaleSTL } from './simscale.js';
 import { checkMesh, toAsciiSTL, toBinarySTL } from './stl.js';
-import { makeZip } from './zip.js';
 
 const wasm = await Module();
 wasm.setup();
@@ -134,28 +133,24 @@ function download(data, name, type) {
 const scale = () => (exportOpts.units === 'm' ? 0.001 : 1);
 const exportBody = (key, base) => () =>
   download(toBinarySTL(fan.parts[key].getMesh(), { scale: scale(), name: base }), `${base}_${exportOpts.units}.stl`, 'model/stl');
+function exportRegions(layout, base) {
+  const { units, ...domain } = exportOpts;
+  const regions = buildFlowRegions(wasm, fan, domain);
+  download(simscaleSTL(regions, layout, { scale: scale() }), `${base}_${units}.stl`, 'model/stl');
+  for (const key of ['zone', 'flowRegion', 'flowStatic', 'flowRotating']) regions[key].delete();
+}
 const exportActions = {
   rotor: exportBody('rotor', 'fan_rotor'),
   stator: exportBody('stator', 'fan_stator'),
   assembly: exportBody('assembly', 'fan_assembly'),
   mrfZone: exportBody('mrfZone', 'fan_mrf_zone'),
-  // Fluid regions with named faces — the recommended SimScale MRF input.
-  mrfPackage() {
-    const { units, ...domain } = exportOpts;
-    const regions = buildFlowRegions(wasm, fan, domain);
-    download(simscaleZip(overlapFaces(regions), { scale: scale() }), `simscale_mrf_${units}.zip`, 'application/zip');
-    for (const key of ['zone', 'flowRegion', 'flowStatic', 'flowRotating']) regions[key].delete();
-  },
-  mrfConformal() {
-    const { units, ...domain } = exportOpts;
-    const regions = buildFlowRegions(wasm, fan, domain);
-    download(simscaleZip(conformalFaces(regions), { scale: scale() }), `simscale_mrf_conformal_${units}.zip`, 'application/zip');
-    for (const key of ['zone', 'flowRegion', 'flowStatic', 'flowRotating']) regions[key].delete();
-  },
+  // Fluid volumes, one closed solid block each — the SimScale MRF input.
+  mrfPackage: () => exportRegions('overlap', 'simscale_mrf'),
+  mrfConformal: () => exportRegions('conformal', 'simscale_mrf_conformal'),
   partsPackage() {
-    const files = [['rotor', 'rotor'], ['stator', 'stator'], ['mrf_zone', 'mrfZone']]
-      .map(([name, key]) => [`${name}.stl`, toAsciiSTL([[name, fan.parts[key].getMesh()]], { scale: scale() })]);
-    download(makeZip(files), `simscale_parts_${exportOpts.units}.zip`, 'application/zip');
+    const named = [['rotor', 'rotor'], ['stator', 'stator'], ['mrf_zone', 'mrfZone']]
+      .map(([name, key]) => [name, fan.parts[key].getMesh()]);
+    download(toAsciiSTL(named, { scale: scale() }), `simscale_parts_${exportOpts.units}.stl`, 'model/stl');
   },
   params() {
     download(JSON.stringify({ units: 'mm', params: fan.params, derived: fan.derived }, null, 2), 'fan_params.json', 'application/json');
@@ -227,9 +222,9 @@ fe.add(exportOpts, 'mode', { 'Ống gió (ducted)': 'ducted', 'Không gian tự 
 fe.add(exportOpts, 'domainRadius', 400, 3000, 10).name('Miền tính: bán kính (mm, tự do)');
 fe.add(exportOpts, 'upstream', 300, 5000, 10).name('Miền tính: phía hút (mm)');
 fe.add(exportOpts, 'downstream', 300, 10000, 10).name('Miền tính: phía đẩy (mm)');
-fe.add(exportActions, 'mrfPackage').name('⬇ Gói SimScale MRF (zip)');
-fe.add(exportActions, 'mrfConformal').name('⬇ Gói MRF dự phòng (conformal)');
-fe.add(exportActions, 'partsPackage').name('⬇ Gói chi tiết rắn (zip)');
+fe.add(exportActions, 'mrfPackage').name('⬇ SimScale MRF (.stl)');
+fe.add(exportActions, 'mrfConformal').name('⬇ SimScale MRF dự phòng (.stl)');
+fe.add(exportActions, 'partsPackage').name('⬇ Chi tiết rắn (.stl)');
 fe.add(exportActions, 'assembly').name('⬇ Cả quạt (1 khối)');
 fe.add(exportActions, 'rotor').name('⬇ Rotor');
 fe.add(exportActions, 'stator').name('⬇ Stator (vỏ+motor)');

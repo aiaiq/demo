@@ -5,7 +5,7 @@
 Mô hình 3D tham số của quạt hướng trục lắp bích (vỏ ống + 2 mặt bích có lỗ bulông, motor rotor ngoài, 5 cánh dạng lưỡi liềm, 4 thanh giằng, hộp điện).
 
 - **Dựng hình:** [manifold-3d](https://github.com/elalish/manifold). Mọi khối xuất ra đều kín nước (watertight), đóng, pháp tuyến hướng ra ngoài và không tự cắt. Đây là điều kiện để SimScale chia lưới được.
-- **Xem và chỉnh:** Three.js (`index.html`). Sửa thông số trong bảng điều khiển thì hình dựng lại ngay, và có thể xuất STL/ZIP trực tiếp từ trình duyệt.
+- **Xem và chỉnh:** Three.js (`index.html`). Sửa thông số trong bảng điều khiển thì hình dựng lại ngay, và có thể xuất STL trực tiếp từ trình duyệt.
 - **Xuất hàng loạt:** `npm run export` dựng hình, kiểm tra và ghi file vào `export/`.
 
 > Kích thước mặc định là ước lượng theo ảnh của một quạt Ø500 điển hình, **không phải số đo của sản phẩm cụ thể**. Nếu có datasheet, hãy nhập lại các thông số ở phần [Thông số](#thông-số).
@@ -14,26 +14,27 @@ Mô hình 3D tham số của quạt hướng trục lắp bích (vỏ ống + 2 
 
 | File | Nội dung | Dùng khi |
 |---|---|---|
-| **`simscale_mrf_mm.zip`** | Khối **không khí** `flow_region` (ống hút → quạt → ống đẩy) + trụ vùng quay `rotating_zone` chồng lên nó, mặt đã đặt tên | **Khuyên dùng** cho MRF. Đây là cách bố trí SimScale hướng dẫn |
-| `simscale_mrf_conformal_mm.zip` | 2 khối không khí tiếp giáp, không chồng nhau: `flow_static` + `flow_rotating`, chung mặt `mrf_interface` | Dự phòng nếu gói trên không chia lưới được |
-| `simscale_parts_mm.zip` | 3 khối **rắn**: `rotor`, `stator`, `mrf_zone` | Khi muốn tự tạo miền lưu chất trong SimScale |
+| **`simscale_mrf_mm.stl`** | 2 khối **không khí**, mỗi khối là một `solid` kín: `flow_region` (ống hút → quạt → ống đẩy) và trụ vùng quay `rotating_zone` chồng lên nó | **Khuyên dùng** cho MRF. Đây là cách bố trí SimScale hướng dẫn |
+| `simscale_mrf_conformal_mm.stl` | 2 khối không khí tiếp giáp, không chồng nhau: `flow_static` + `flow_rotating` | Dự phòng nếu file trên không chia lưới được |
 | `fan_assembly.stl` | Cả quạt là 1 khối rắn (rotor nối stator qua trục) | Mô phỏng nhanh không quay, xem cản dòng |
 | `fan_rotor.stl` / `fan_stator.stl` / `fan_mrf_zone.stl` | Từng chi tiết, binary STL | Dùng trong phần mềm CAD/CFD khác |
 | `report.json` | Kết quả kiểm tra: kín nước, thể tích, genus, bbox, khe hở | Đối chiếu |
-| `m/simscale_mrf_m.zip` | Như gói khuyên dùng nhưng đơn vị **mét** | Khi SimScale không cho chọn đơn vị lúc upload |
+| `m/simscale_mrf_m.stl` | Như file khuyên dùng nhưng đơn vị **mét** | Khi SimScale không cho chọn đơn vị lúc upload |
 
 **Hệ trục:** trục quay là **Z** đi qua gốc (0,0,0), mặt phẳng giữa cánh nằm ở z = 0. Khi **ω > 0 quanh +Z** (quy tắc bàn tay phải), gió thổi về **+Z**: phía hút ở −Z, phía đẩy ở +Z.
 
-### Gói `simscale_mrf_mm.zip`
+### File `simscale_mrf_mm.stl`
 
-SimScale nhận một ZIP gồm nhiều STL như sau: **mỗi file STL thành 1 solid (khối)**, và **mỗi khối `solid <tên>` trong file thành 1 mặt có tên**.
+SimScale import **mỗi khối `solid <tên>` trong file STL thành một part riêng**. Vì vậy mỗi khối trong file này là một khối kín (volume):
 
-| Khối | Các mặt |
+| Khối | Là gì |
 |---|---|
-| `flow_region` = ống Ø500 (z từ −1500 đến +3000) − motor/thanh giằng − rotor | `inlet`, `outlet`, `duct_walls`, `stator_walls`, `rotor_walls` |
-| `rotating_zone` = trụ R = 247.5 mm, z ∈ [−70, 42.5] mm | `rotating_zone` |
+| `flow_region` | ống Ø500 (z từ −1500 đến +3000) trừ đi motor, thanh giằng và rotor |
+| `rotating_zone` | trụ R = 247.5 mm, z ∈ [−70, 42.5] mm |
 
-Mặt trụ của vùng quay nằm giữa khe hở đầu cánh (cánh R = 245, thành ống R = 250). Mặt sau của nó nằm giữa khe rotor–stator (40 → 45 mm).
+Các mặt biên (đầu hút, đầu đẩy, thành ống, cánh…) do **Facet split** của SimScale tự tách khi import. Mặt trụ của vùng quay nằm giữa khe hở đầu cánh (cánh R = 245, thành ống R = 250). Mặt sau của nó nằm giữa khe rotor–stator (40 → 45 mm).
+
+`npm run export` đọc lại chính các file vừa ghi và kiểm tra **từng khối `solid` đều kín**.
 
 Miền tính mặc định là **ống gió** (`--mode ducted`), đúng cách lắp của quạt có bích, nên dựng được cả đường đặc tính. Muốn mô phỏng quạt thổi ra không gian rộng thì dùng `--mode free`. Chế độ này chỉ đúng khi Δp = 0.
 
@@ -86,9 +87,8 @@ Mỗi tiết diện cánh là một tấm cong (camber dạng parabol, mép trò
 
 ```
 src/fan.js        dựng hình tham số (manifold-3d)
-src/simscale.js   vùng lưu chất + gói ZIP cho SimScale
-src/stl.js        ghi STL binary/ASCII nhiều solid, kiểm tra kín nước
-src/zip.js        ghi ZIP (Node + trình duyệt)
+src/simscale.js   các khối không khí cho SimScale
+src/stl.js        ghi/đọc STL binary/ASCII nhiều solid, kiểm tra kín nước
 src/viewer.js     trang xem Three.js
 scripts/export.mjs  xuất + kiểm tra hàng loạt
 ```

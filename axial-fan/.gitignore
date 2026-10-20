@@ -1,3 +1,4 @@
 node_modules/
 export/m/*
-!export/m/simscale_mrf_m.zip
+!export/m/simscale_mrf_m.stl
+export/simscale_parts_*.stl

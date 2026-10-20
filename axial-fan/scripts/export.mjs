@@ -3,12 +3,10 @@
 // Any DEFAULTS / DOMAIN_DEFAULTS key can be overridden, e.g. --bladeCount 7 --domainRadius 1200
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { deflateRawSync } from 'node:zlib';
 import Module from 'manifold-3d';
 import { DEFAULTS, buildFan } from '../src/fan.js';
-import { DOMAIN_DEFAULTS, buildFlowRegions, conformalFaces, overlapFaces, simscaleZip } from '../src/simscale.js';
-import { checkMesh, parseBinarySTL, toAsciiSTL, toBinarySTL } from '../src/stl.js';
-import { makeZip } from '../src/zip.js';
+import { DOMAIN_DEFAULTS, LAYOUTS, buildFlowRegions, interfaceKey } from '../src/simscale.js';
+import { checkMesh, parseAsciiSTL, parseBinarySTL, toAsciiSTL, toBinarySTL } from '../src/stl.js';
 
 const args = process.argv.slice(2);
 const opts = { units: 'mm', out: 'export' };
@@ -64,21 +62,29 @@ for (const [key, base] of Object.entries(files)) {
   ok &&= status === 'NoError' && check.watertight && fileCheck.watertight && m.volume() > 0;
 }
 
-// SimScale ZIP of the solid parts: one STL file (= one body) per part.
-writeFileSync(join(opts.out, `simscale_parts_${opts.units}.zip`), makeZip(
-  [['rotor', 'rotor'], ['stator', 'stator'], ['mrf_zone', 'mrfZone']]
-    .map(([name, key]) => [`${name}.stl`, toAsciiSTL([[name, meshes[key]]], { scale })]),
-  { deflate: deflateRawSync },
-));
+// SimScale files: one ASCII STL each, one closed `solid` block per body
+// (SimScale imports every block as its own part).
+const writeBlocks = (file, named) => {
+  const text = toAsciiSTL(named, { scale });
+  writeFileSync(join(opts.out, file), text);
+  // Re-read the written file: every block must be a closed volume on its own.
+  for (const [name, mesh] of parseAsciiSTL(text)) {
+    const c = checkMesh(mesh);
+    report.files[`${file}:${name}`] = { triangles: c.triangles, watertight: c.watertight };
+    ok &&= c.watertight;
+  }
+};
+report.files = {};
+writeBlocks(`simscale_parts_${opts.units}.stl`,
+  [['rotor', meshes.rotor], ['stator', meshes.stator], ['mrf_zone', meshes.mrfZone]]);
 
-// SimScale ZIPs of fluid volumes with named faces: the documented
-// overlapping-zone layout (recommended) and the conformal fallback.
+// Fluid volumes: the documented overlapping-zone layout (recommended) and the
+// conformal fallback.
 const regions = buildFlowRegions(wasm, fan, domain);
-const faces = { ...overlapFaces(regions), ...conformalFaces(regions) };
-const zip = (name, bodies) => writeFileSync(join(opts.out, `${name}_${opts.units}.zip`), simscaleZip(
-  Object.fromEntries(bodies.map((b) => [b, faces[b]])), { scale, units: opts.units, deflate: deflateRawSync }));
-zip('simscale_mrf', ['flow_region', 'rotating_zone']);
-zip('simscale_mrf_conformal', ['flow_static', 'flow_rotating']);
+for (const layout of Object.keys(LAYOUTS)) {
+  const file = `simscale_mrf${layout === 'overlap' ? '' : '_' + layout}_${opts.units}.stl`;
+  writeBlocks(file, LAYOUTS[layout].map(([name, key]) => [name, regions[key].getMesh()]));
+}
 report.domain = regions.options;
 report.flowRegions = {};
 for (const [name, m] of [['flow_region', regions.flowRegion], ['flow_static', regions.flowStatic], ['flow_rotating', regions.flowRotating]]) {
@@ -90,22 +96,12 @@ for (const [name, m] of [['flow_region', regions.flowRegion], ['flow_static', re
     status: m.status(),
     connectedVolumes: pieces.length,
     volume_mm3: +m.volume().toFixed(1),
-    faces: Object.fromEntries(faces[name].map(([f, mesh]) => [f, mesh.triVerts.length / 3])),
     ...check,
   };
   ok &&= m.status() === 'NoError' && check.watertight && pieces.length === 1;
 }
 // The interface must be the identical triangle set seen from both regions.
-const ifaceKey = (mesh) => {
-  const { vertProperties: v, triVerts: t, numProp: n } = mesh;
-  const tris = [];
-  for (let i = 0; i < t.length; i += 3) {
-    tris.push([t[i], t[i + 1], t[i + 2]].map((k) => [0, 1, 2].map((c) => v[k * n + c].toFixed(4)).join(',')).sort().join('|'));
-  }
-  return tris.sort().join('\n');
-};
-const iface = (name) => faces[name].find(([f]) => f === 'mrf_interface')[1];
-report.checks_interface_conformal = ifaceKey(iface('flow_static')) === ifaceKey(iface('flow_rotating'));
+report.checks_interface_conformal = interfaceKey(regions, 'flowStatic') === interfaceKey(regions, 'flowRotating');
 ok &&= report.checks_interface_conformal;
 
 // Geometric consistency checks between bodies.
@@ -134,8 +130,9 @@ console.table(Object.fromEntries(Object.entries(report.bodies).map(([k, b]) => [
 }])));
 console.table(report.checks);
 console.table(Object.fromEntries(Object.entries(report.flowRegions).map(([k, r]) => [k, {
-  watertight: r.watertight, volumes: r.connectedVolumes, triangles: r.triangles, faces: Object.keys(r.faces).join(' '),
+  watertight: r.watertight, volumes: r.connectedVolumes, triangles: r.triangles,
 }])));
 console.log('MRF interface conformal:', report.checks_interface_conformal);
+console.table(report.files);
 console.log(ok ? `OK → ${opts.out}/ (units: ${opts.units})` : 'VALIDATION FAILED');
 process.exit(ok ? 0 : 1);

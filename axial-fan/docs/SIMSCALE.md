@@ -8,15 +8,19 @@ Mục tiêu: tính **lưu lượng Q**, **độ tăng áp Δp**, **mô-men/công
 
 ## Bước 0 – Chuẩn bị file
 
-Dùng **`export/simscale_mrf_mm.zip`**. File này chứa sẵn **lưu chất** (không khí), không chứa kim loại quạt.
+Dùng **`export/simscale_mrf_mm.stl`**. Đây là một file STL thường, không phải ZIP. Nó chứa sẵn **khối không khí**, không chứa phần kim loại của quạt, và gồm đúng 2 khối kín:
 
-| Khối (solid) | Là gì | Các mặt (face) |
-|---|---|---|
-| `flow_region` | Không khí trong ống: ống hút dài 1.5 m → quạt → ống đẩy dài 3 m, Ø500. Cánh, motor và thanh giằng là các "lỗ" bên trong khối này | `inlet` (z = −1.5 m), `outlet` (z = +3 m), `duct_walls`, `stator_walls`, `rotor_walls` |
-| `rotating_zone` | Hình trụ bao quanh cánh quạt (R = 247.5 mm, z từ −70 đến +42.5 mm). Khối này **chồng lên** `flow_region` | `rotating_zone` |
+| Khối (part) | Là gì |
+|---|---|
+| `flow_region` | Không khí trong ống: ống hút 1.5 m → quạt → ống đẩy 3 m, Ø500. Cánh, bầu, motor và thanh giằng là các "lỗ" khoét bên trong khối này |
+| `rotating_zone` | Hình trụ ngắn bao quanh cánh quạt (R = 247.5 mm, z từ −70 đến +42.5 mm). Khối này **nằm chồng bên trong** `flow_region`, đúng cách SimScale yêu cầu cho vùng quay |
 
-- Hệ trục: trục quay là **Z** đi qua gốc toạ độ. Khi **ω dương** (quy tắc bàn tay phải quanh +Z), gió thổi theo chiều **+Z**, tức từ `inlet` sang `outlet`.
-- Nếu ở bước upload SimScale **không cho chọn đơn vị**, dùng `export/m/simscale_mrf_m.zip` (toạ độ đã tính bằng mét).
+- Hệ trục: trục quay là **Z** đi qua gốc toạ độ. Khi **ω dương** (quy tắc bàn tay phải quanh +Z), gió thổi theo chiều **+Z**.
+- **Đầu hút (inlet)** là đầu ống **gần quạt** (cách quạt 1.5 m, z = −1.5 m). Bên ngoài ống, gần đầu này, bạn sẽ thấy 4 chấm nhỏ: đó là đầu các thanh giằng.
+- **Đầu đẩy (outlet)** là đầu ống **xa quạt** (z = +3 m).
+- Nếu SimScale không cho chọn đơn vị khi upload, dùng `export/m/simscale_mrf_m.stl` (toạ độ đã tính bằng mét).
+
+> Một file STL không giữ được tên của từng mặt: SimScale biến mỗi khối `solid` trong file thành một part riêng. Vì vậy mỗi khối ở đây là một khối kín, còn các mặt (đầu hút, đầu đẩy, thành ống, cánh…) do SimScale tự tách bằng **Facet split** khi import.
 
 ## Bước 1 – Tạo project
 
@@ -25,16 +29,16 @@ Dùng **`export/simscale_mrf_mm.zip`**. File này chứa sẵn **lưu chất** (
 
 ## Bước 2 – Import hình học
 
-1. Trong cây project, bấm **Geometries → "+" / Import geometry → Upload from computer**.
-2. Chọn `simscale_mrf_mm.zip`.
-   - Nếu SimScale báo **"Unidentified file format"**, chọn **STL** ở ô **File format** rồi bấm import. File ZIP không tự mang định dạng, nên đôi khi SimScale không tự nhận ra.
+1. Xoá các geometry đã import trước đó (bản ZIP cũ dùng sai cách đóng gói).
+2. Bấm **Geometries → "+" → Import from Computer** rồi chọn `simscale_mrf_mm.stl`.
+   - Nếu SimScale hỏi **File format**, chọn **STL**.
 3. Trong tuỳ chọn import:
-   - **Facet split: OFF** (quan trọng). Nếu bật, SimScale sẽ tự cắt các mặt theo góc và làm mất tên mặt.
+   - **Facet split: ON**, để góc mặc định. Đầu ống vuông góc với thành ống nên sẽ được tách thành mặt riêng.
    - **Units: mm**, nếu có ô chọn đơn vị.
-4. Đợi import xong rồi kiểm tra ba điều:
-   - Có **2 solids**: `flow_region` và `rotating_zone`.
-   - Có các mặt: `inlet`, `outlet`, `duct_walls`, `stator_walls`, `rotor_walls`, `rotating_zone`. Tên có thể kèm tiền tố tên file.
-   - **Kích thước đúng**: đường kính ống 0.5 m, tổng chiều dài 4.5 m. Nếu kích thước lớn gấp 1000 lần, xoá geometry và upload lại bằng bản `_m.zip`.
+4. Đợi import xong rồi kiểm tra:
+   - Cây **GEOMETRY** bên phải có **2 part**: `flow_region` và `rotating_zone`.
+   - Bật **Show faces** thì thấy nhiều mặt dạng `Face …`. Đó là các mặt do Facet split tách ra.
+   - **Kích thước đúng**: ống Ø0.5 m, dài 4.5 m. Nếu lớn gấp 1000 lần, xoá đi và upload bản `_m.stl`.
 
 ## Bước 3 – Tạo simulation
 
@@ -47,7 +51,8 @@ Dùng **`export/simscale_mrf_mm.zip`**. File này chứa sẵn **lưu chất** (
 ## Bước 4 – Vật liệu
 
 1. Bấm **Materials → "+"** và chọn **Air**. Giá trị mặc định là đủ: ρ ≈ 1.2 kg/m³, ν ≈ 1.5·10⁻⁵ m²/s.
-2. Gán cho khối `flow_region`. Nếu SimScale đòi gán cả `rotating_zone`, gán luôn cả hai.
+2. Ở ô **Assigned Volumes**, bấm vào **ống** trong khung 3D để chọn `flow_region`. Thanh công cụ phía trên phải đang ở chế độ **chọn khối (volume)**.
+3. Nếu SimScale đòi gán cả `rotating_zone`, gán luôn cả hai.
 
 ## Bước 5 – Điều kiện ban đầu
 
@@ -55,13 +60,16 @@ Dùng **`export/simscale_mrf_mm.zip`**. File này chứa sẵn **lưu chất** (
 
 ## Bước 6 – Điều kiện biên
 
+Chuyển thanh công cụ sang chế độ **chọn mặt (face)**, rồi bấm trực tiếp lên mặt cần gán trong khung 3D.
+
 | Loại | Gán cho mặt | Giá trị |
 |---|---|---|
-| **Pressure inlet** | `inlet` | Total pressure = **0 Pa** |
-| **Pressure outlet** | `outlet` | Static (gauge) pressure = **0 Pa** cho lần chạy đầu, sau đó đổi để dựng đường đặc tính (bước 14) |
-| Wall (no-slip) | `duct_walls`, `stator_walls`, `rotor_walls` | Mặc định. SimScale tự gán no-slip cho các mặt chưa gán. Không cần khai báo vận tốc quay cho `rotor_walls`, vì vùng MRF sẽ lo phần đó |
+| **Pressure inlet** | mặt tròn ở **đầu ống gần quạt** (z = −1.5 m) | Total pressure = **0 Pa** |
+| **Pressure outlet** | mặt tròn ở **đầu ống xa quạt** (z = +3 m) | Static (gauge) pressure = **0 Pa** cho lần chạy đầu, sau đó đổi để dựng đường đặc tính (bước 14) |
+| Wall (no-slip) | tất cả các mặt còn lại | Mặc định. SimScale tự gán no-slip cho các mặt chưa gán. Không cần khai báo vận tốc quay cho mặt cánh, vì vùng MRF sẽ lo phần đó |
 
-**Không** gán điều kiện biên cho mặt `rotating_zone`. Đó là mặt nằm bên trong lưu chất, không phải biên.
+- Sau khi gán, các mặt sẽ được đặt tên theo điều kiện biên.
+- **Không** gán điều kiện biên cho các mặt của part `rotating_zone`. Đó là mặt nằm bên trong không khí, không phải biên.
 
 > Dùng **áp suất ở cả hai đầu**, không dùng velocity inlet. Như vậy lưu lượng do chính quạt tạo ra, và mới đo được đặc tính quạt.
 
@@ -72,7 +80,7 @@ Dùng **`export/simscale_mrf_mm.zip`**. File này chứa sẵn **lưu chất** (
    - **Rotational velocity:** `146.6 rad/s` (= 1400 rpm). Công thức đổi: ω = rpm × 2π / 60.
    - **Origin:** `(0, 0, 0)`
    - **Axis:** `(0, 0, 1)`
-   - **Assignment:** chọn **volume `rotating_zone`**. Phải chọn khối; nếu chọn mặt thì bước chia lưới sẽ báo lỗi.
+   - **Assignment:** ở chế độ chọn khối, chọn part **`rotating_zone`** (bấm vào nó trong cây GEOMETRY). Phải chọn khối; nếu chọn mặt thì bước chia lưới sẽ báo lỗi.
 
 ## Bước 8 – Numerics
 
@@ -92,13 +100,16 @@ Dùng **`export/simscale_mrf_mm.zip`**. File này chứa sẵn **lưu chất** (
 
 Phải tạo các mục này **trước khi chạy**. SimScale chỉ ghi số liệu cho những gì đã khai báo.
 
-1. **Forces and moments**: đặt tên `rotor`, center `(0, 0, 0)`, gán mặt `rotor_walls`. Kết quả cho ra **M_z** (mô-men quanh trục quạt).
-2. **Surface data → Area average**:
-   - tên `p_in`, gán mặt `inlet`
-   - tên `p_out`, gán mặt `outlet`
-3. **Surface data → Volume (flow) rate**:
-   - tên `Q_out`, gán mặt `outlet`
-   - tên `Q_in`, gán mặt `inlet` (dùng để kiểm tra cân bằng lưu lượng)
+1. **Surface data → Area average**:
+   - tên `p_in`, gán mặt đầu hút
+   - tên `p_out`, gán mặt đầu đẩy
+2. **Surface data → Volume (flow) rate**:
+   - tên `Q_out`, gán mặt đầu đẩy
+   - tên `Q_in`, gán mặt đầu hút (dùng để kiểm tra cân bằng lưu lượng)
+3. **Forces and moments**: đặt tên `rotor`, center `(0, 0, 0)`. Gán **các mặt của cánh và bầu quạt**. Kết quả cho ra **M_z** (mô-men quanh trục quạt). Đây là bước mất công nhất vì các mặt nằm bên trong ống:
+   - Chọn mặt thành ống, ẩn nó đi (biểu tượng con mắt gạch chéo). Ẩn luôn part `rotating_zone`.
+   - Lúc này nhìn thấy cánh, bầu, motor và thanh giằng. Chọn **5 cánh và bầu phía trước**: bấm từng mặt, hoặc dùng chọn khung chữ nhật từ góc nhìn ngang, khung chỉ phủ phần trước motor.
+   - **Không** chọn motor phía sau và 4 thanh giằng. Đó là phần đứng yên; nếu chọn vào, mô-men đo được sẽ sai.
 
 ## Bước 11 – Chia lưới
 
@@ -109,11 +120,9 @@ Phải tạo các mục này **trước khi chạy**. SimScale chỉ ghi số li
 
    | Loại | Gán cho | Kích thước |
    |---|---|---|
-   | Local element size (surface) | `rotor_walls` | **2 mm** |
-   | Local element size (surface) | `stator_walls` | 4 mm |
-   | Local element size (surface) | `duct_walls` | 4 mm |
-   | Region refinement | volume `rotating_zone` | **6 mm** |
-   | Inflate boundary layer (nếu chưa bật physics-based) | `rotor_walls`, `duct_walls` | 3 lớp, tỉ lệ tăng 1.5 |
+   | Region refinement | part `rotating_zone` | **4 mm**. Ô nhỏ trong cả vùng cánh, nên không phải chọn từng mặt cánh |
+   | Local element size (surface) | các mặt cánh và bầu (nếu đã chọn ở bước 10) | 2 mm, tuỳ chọn |
+   | Inflate boundary layer (nếu chưa bật physics-based) | mặt cánh và thành ống | 3 lớp, tỉ lệ tăng 1.5 |
 
    Mesher Standard **tự tạo cell zone** cho vùng MRF từ khối `rotating_zone`. Không cần bật thêm gì.
 3. Bấm **Generate**. Lưới nên có khoảng **1–3 triệu ô**.
@@ -162,28 +171,30 @@ Muốn đổi tốc độ quay, chỉ cần sửa ω ở Bước 7. Quy luật �
 
 | Hiện tượng | Cách xử lý |
 |---|---|
-| Lỗi chia lưới kiểu "cell zone … face assignment" | Vùng MRF đang gán cho **mặt**. Gán lại cho **volume** `rotating_zone` |
-| Kích thước sai 1000 lần | Upload lại với đúng đơn vị, hoặc dùng bản `_m.zip` |
-| Mặt bị tách lung tung, mất tên `inlet`/`outlet` | Upload lại với **Facet split: OFF** |
+| Cây GEOMETRY hiện các part `inlet`, `outlet`, `stator_walls#1`… và **không có** `flow_region` | Đó là bản ZIP cũ (sai cách đóng gói). Xoá đi và import `simscale_mrf_mm.stl` |
+| Assigned Volumes không chọn được gì | Thanh công cụ đang ở chế độ chọn mặt. Chuyển sang chế độ chọn khối |
+| Lỗi chia lưới kiểu "cell zone … face assignment" | Vùng MRF đang gán cho **mặt**. Gán lại cho khối `rotating_zone` |
+| Kích thước sai 1000 lần | Upload lại với đúng đơn vị, hoặc dùng bản `_m.stl` |
+| Đầu ống không tách thành mặt riêng | Upload lại với **Facet split: ON** |
 | Phân kỳ ngay những vòng lặp đầu | Chạy lại với lưới mịn hơn quanh cánh. Có thể chạy trước ở 700 rpm (73.3 rad/s), rồi dùng kết quả đó làm điều kiện ban đầu cho 1400 rpm |
-| Không chia lưới được với gói chồng khối (`rotating_zone` chồng lên `flow_region`) | Thử gói dự phòng `simscale_mrf_conformal_mm.zip` (xem dưới) |
+| Không chia lưới được do `rotating_zone` chồng lên `flow_region` | Thử file dự phòng `simscale_mrf_conformal_mm.stl` (xem dưới) |
 | Hết core-hour (tài khoản Community) | Dùng Fineness 4–5. Có thể rút ngắn ống đẩy: `node scripts/export.mjs --downstream 2000` |
 
-### Gói dự phòng `simscale_mrf_conformal_mm.zip`
+### File dự phòng `simscale_mrf_conformal_mm.stl`
 
-Gói này gồm hai khối lưu chất **không chồng nhau** mà tiếp giáp tại mặt `mrf_interface`:
+File này gồm hai khối không khí **không chồng nhau**, tiếp giáp nhau tại mặt trụ của vùng quay:
 
-- `flow_static`: `inlet`, `outlet`, `duct_walls`, `stator_walls`, `mrf_interface`
-- `flow_rotating`: `rotor_walls`, `mrf_interface`
+- `flow_static`: không khí trong ống, trừ phần hình trụ quanh cánh.
+- `flow_rotating`: phần không khí trong hình trụ quanh cánh.
 
 Thiết lập giống hệt hướng dẫn trên, chỉ khác ba chỗ:
 
 - Gán Air cho **cả hai khối**.
-- Gán vùng MRF cho **volume `flow_rotating`**.
-- **Không** gán điều kiện biên cho `mrf_interface`.
+- Gán vùng MRF cho khối **`flow_rotating`**.
+- **Không** gán điều kiện biên cho mặt tiếp giáp giữa hai khối.
 
 ### Thay đổi miền tính
 
 Mặc định miền tính là **ống gió** (`--mode ducted`), đúng cách lắp thực tế của quạt có bích. Đây là cấu hình dùng để đo đường đặc tính.
 
-Nếu muốn mô phỏng quạt thổi ra không gian rộng: `node scripts/export.mjs --mode free --domainRadius 900`. Khi đó mặt bao ngoài tên là `farfield`; nên đặt nó là Pressure inlet 0 Pa hoặc Wall (slip). Cấu hình này **chỉ đúng khi Δp = 0**: khi Δp > 0, không khí sẽ vòng ngược từ phía đẩy về phía hút qua bên ngoài vỏ quạt.
+Nếu muốn mô phỏng quạt thổi ra không gian rộng: `node scripts/export.mjs --mode free --domainRadius 900`. Khi đó mặt trụ bao ngoài miền tính nên đặt là Pressure inlet 0 Pa hoặc Wall (slip). Cấu hình này **chỉ đúng khi Δp = 0**: khi Δp > 0, không khí sẽ vòng ngược từ phía đẩy về phía hút qua bên ngoài vỏ quạt.

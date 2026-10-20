@@ -105,3 +105,27 @@ export function parseBinarySTL(bytes) {
   }
   return { numProp: 3, vertProperties: new Float32Array(pos), triVerts: tris };
 }
+
+// Read an ASCII STL into its `solid` blocks, welding vertices by their exact
+// text, so each block can be checked as the closed body SimScale will see.
+export function parseAsciiSTL(text) {
+  const blocks = [];
+  let cur = null;
+  for (const line of text.split('\n')) {
+    const s = line.trim();
+    if (s.startsWith('solid ')) cur = { name: s.slice(6), index: new Map(), pos: [], tris: [] };
+    else if (s.startsWith('vertex ') && cur) {
+      let id = cur.index.get(s);
+      if (id === undefined) {
+        id = cur.pos.length / 3;
+        cur.index.set(s, id);
+        cur.pos.push(...s.split(/\s+/).slice(1).map(Number));
+      }
+      cur.tris.push(id);
+    } else if (s.startsWith('endsolid') && cur) {
+      blocks.push([cur.name, { numProp: 3, vertProperties: new Float32Array(cur.pos), triVerts: new Uint32Array(cur.tris) }]);
+      cur = null;
+    }
+  }
+  return blocks;
+}
