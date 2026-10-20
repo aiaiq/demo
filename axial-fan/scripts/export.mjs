@@ -76,7 +76,7 @@ writeFileSync(join(opts.out, `simscale_parts_${opts.units}.zip`), makeZip(
 const regions = buildFlowRegions(wasm, fan, domain);
 const faces = { ...overlapFaces(regions), ...conformalFaces(regions) };
 const zip = (name, bodies) => writeFileSync(join(opts.out, `${name}_${opts.units}.zip`), simscaleZip(
-  fan, Object.fromEntries(bodies.map((b) => [b, faces[b]])), { scale, units: opts.units, deflate: deflateRawSync }));
+  Object.fromEntries(bodies.map((b) => [b, faces[b]])), { scale, units: opts.units, deflate: deflateRawSync }));
 zip('simscale_mrf', ['flow_region', 'rotating_zone']);
 zip('simscale_mrf_conformal', ['flow_static', 'flow_rotating']);
 report.domain = regions.options;

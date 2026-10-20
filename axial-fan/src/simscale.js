@@ -104,18 +104,9 @@ export function conformalFaces(regions) {
 }
 
 // ZIP of ASCII multi-solid STL files, one per body, for SimScale upload.
-export function simscaleZip(fan, faces, { scale = 1, units = 'mm', deflate } = {}) {
+export function simscaleZip(faces, { scale = 1, deflate } = {}) {
   const files = Object.entries(faces).map(([body, named]) => [`${body}.stl`, toAsciiSTL(named, { scale })]);
-  const d = fan.derived;
-  const list = Object.entries(faces).map(([body, named]) => `  ${body}: ${named.map(([f]) => f).join(', ')}`);
-  files.push(['README.txt', [
-    `Units: ${units}. Rotation axis: Z through (0,0,0).`,
-    'Positive omega about +Z (right-hand rule) blows air toward +Z (inlet at -Z).',
-    `MRF zone: cylinder R=${d.mrfR} mm, z from ${d.mrfZ0} to ${d.mrfZ1} mm.`,
-    'Bodies and faces:',
-    ...list,
-    'Upload with "Facet split" OFF so each named solid stays one face.',
-    '',
-  ].join('\n')]);
+  // STL files only: any other file in the archive (e.g. a README) stops
+  // SimScale from detecting the format on upload.
   return makeZip(files, { deflate });
 }

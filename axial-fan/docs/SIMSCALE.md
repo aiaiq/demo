@@ -27,6 +27,7 @@ Dùng **`export/simscale_mrf_mm.zip`**. File này chứa sẵn **lưu chất** (
 
 1. Trong cây project, bấm **Geometries → "+" / Import geometry → Upload from computer**.
 2. Chọn `simscale_mrf_mm.zip`.
+   - Nếu SimScale báo **"Unidentified file format"**, chọn **STL** ở ô **File format** rồi bấm import. File ZIP không tự mang định dạng, nên đôi khi SimScale không tự nhận ra.
 3. Trong tuỳ chọn import:
    - **Facet split: OFF** (quan trọng). Nếu bật, SimScale sẽ tự cắt các mặt theo góc và làm mất tên mặt.
    - **Units: mm**, nếu có ô chọn đơn vị.
