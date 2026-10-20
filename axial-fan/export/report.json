@@ -152,31 +152,51 @@
     "rotor_stator_overlap_mm3": 0,
     "mrfZone_stator_overlap_mm3": 0,
     "rotor_outside_mrfZone_mm3": 0,
+    "mrfZone_outside_flow_mm3": 0,
     "rotor_tip_radius_mm": 245,
     "tip_clearance_mm": 5
   },
   "domain": {
+    "mode": "ducted",
     "domainRadius": 900,
     "upstream": 1500,
     "downstream": 3000
   },
   "flowRegions": {
-    "flow_static": {
+    "flow_region": {
       "status": "NoError",
       "connectedVolumes": 1,
-      "volume_mm3": 11424701063.6,
+      "volume_mm3": 881166371.3,
       "faces": {
-        "stator_walls": 8530,
-        "mrf_interface": 636,
-        "farfield": 320,
+        "stator_walls": 3656,
+        "rotor_walls": 53040,
+        "duct_walls": 456,
         "inlet": 158,
         "outlet": 158
       },
-      "triangles": 9802,
+      "triangles": 57468,
       "openEdges": 0,
       "nonManifoldEdges": 0,
       "degenerateTriangles": 0,
-      "minTriangleArea": 0.04215227545847672,
+      "minTriangleArea": 0.03401571548695883,
+      "watertight": true
+    },
+    "flow_static": {
+      "status": "NoError",
+      "connectedVolumes": 1,
+      "volume_mm3": 861236634.4,
+      "faces": {
+        "stator_walls": 3656,
+        "mrf_interface": 636,
+        "duct_walls": 456,
+        "inlet": 158,
+        "outlet": 158
+      },
+      "triangles": 5064,
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenerateTriangles": 0,
+      "minTriangleArea": 0.35806737638497294,
       "watertight": true
     },
     "flow_rotating": {
@@ -184,8 +204,8 @@
       "connectedVolumes": 1,
       "volume_mm3": 19929736.9,
       "faces": {
-        "rotor_walls": 53040,
-        "mrf_interface": 636
+        "mrf_interface": 636,
+        "rotor_walls": 53040
       },
       "triangles": 53676,
       "openEdges": 0,

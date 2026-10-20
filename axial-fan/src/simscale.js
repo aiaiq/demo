@@ -3,17 +3,30 @@
 // SimScale imports a ZIP of STL files as one geometry: every file becomes a
 // solid (body) and every `solid <name>` block inside a file becomes a named
 // face. MRF rotating zones must be assigned to a volume, so we hand SimScale
-// the two fluid volumes directly instead of the fan's metal:
+// fluid volumes directly instead of the fan's metal. Two layouts:
+//
+// "overlap" (SimScale's documented rotating-zone layout, recommended):
+//   flow_region.stl   = domain − stator − rotor
+//     faces: inlet, outlet, duct_walls | farfield, stator_walls, rotor_walls
+//   rotating_zone.stl = plain MRF cylinder overlapping flow_region
+//     face:  rotating_zone
+// "conformal" (two touching, non-overlapping fluid volumes, fallback):
 //   flow_static.stl   = domain − stator − MRF cylinder
-//     faces: inlet, outlet, farfield, stator_walls, mrf_interface
+//     faces: inlet, outlet, duct_walls | farfield, stator_walls, mrf_interface
 //   flow_rotating.stl = MRF cylinder − rotor
 //     faces: mrf_interface, rotor_walls
-// Both share the exact same mrf_interface triangles (conformal interface).
+//   Both share the exact same mrf_interface triangles.
 import { toAsciiSTL } from './stl.js';
 import { makeZip } from './zip.js';
 
 export const DOMAIN_DEFAULTS = {
-  domainRadius: 900, // mm, free-air test chamber around the fan
+  // 'ducted': inlet and outlet pipes with the fan's own bore (the housing wall
+  //           becomes the pipe wall) — the flanged duct-fan test, valid for a
+  //           full fan curve.
+  // 'free':   large cylinder around the whole fan — free delivery only, since
+  //           at Δp > 0 air recirculates around the outside of the housing.
+  mode: 'ducted',
+  domainRadius: 900, // mm, 'free' mode only
   upstream: 1500, // mm from blade mid-plane to inlet face (−Z)
   downstream: 3000, // mm from blade mid-plane to outlet face (+Z)
 };
@@ -23,15 +36,25 @@ export function buildFlowRegions(wasm, fan, opts = {}) {
   const { Manifold } = wasm;
   const { parts, params: p } = fan;
   const zone = parts.mrfZone.asOriginal();
-  const domain = Manifold.cylinder(o.upstream + o.downstream, o.domainRadius, -1, p.circularSegments)
+  const rotor = parts.rotor.asOriginal();
+  const ducted = o.mode === 'ducted';
+  const radius = ducted ? fan.derived.ductR : o.domainRadius;
+  const domain = Manifold.cylinder(o.upstream + o.downstream, radius, -1, p.circularSegments)
     .translate([0, 0, -o.upstream])
     .asOriginal();
+  // In a ducted domain the housing wall is the domain wall; only the motor and
+  // struts (which run 1 mm into the wall) remain as stationary obstacles.
+  const stator = ducted ? parts.motor : parts.stator;
   return {
     options: o,
+    sideName: ducted ? 'duct_walls' : 'farfield',
     zoneID: zone.originalID(),
     domainID: domain.originalID(),
-    flowStatic: domain.subtract(parts.stator).subtract(zone),
-    flowRotating: zone.subtract(parts.rotor),
+    rotorID: rotor.originalID(),
+    zone,
+    flowRegion: domain.subtract(stator).subtract(rotor),
+    flowStatic: domain.subtract(stator).subtract(zone),
+    flowRotating: zone.subtract(rotor),
   };
 }
 
@@ -57,11 +80,22 @@ function splitFaces(mesh, classify) {
   return [...groups].map(([name, tris]) => [name, { vertProperties: v, numProp: n, triVerts: new Uint32Array(tris) }]);
 }
 
-export function flowRegionFaces(regions) {
+const domainFace = (nz, side) => (nz < -0.99 ? 'inlet' : nz > 0.99 ? 'outlet' : side);
+
+export function overlapFaces(regions) {
+  const { domainID, rotorID } = regions;
+  const flowFaces = splitFaces(regions.flowRegion.getMesh(), (id, nz) => {
+    if (id === domainID) return domainFace(nz, regions.sideName);
+    return id === rotorID ? 'rotor_walls' : 'stator_walls';
+  });
+  return { flow_region: flowFaces, rotating_zone: [['rotating_zone', regions.zone.getMesh()]] };
+}
+
+export function conformalFaces(regions) {
   const { zoneID, domainID } = regions;
   const staticFaces = splitFaces(regions.flowStatic.getMesh(), (id, nz) => {
     if (id === zoneID) return 'mrf_interface';
-    if (id === domainID) return nz < -0.99 ? 'inlet' : nz > 0.99 ? 'outlet' : 'farfield';
+    if (id === domainID) return domainFace(nz, regions.sideName);
     return 'stator_walls';
   });
   const rotatingFaces = splitFaces(regions.flowRotating.getMesh(), (id) =>
@@ -73,12 +107,13 @@ export function flowRegionFaces(regions) {
 export function simscaleZip(fan, faces, { scale = 1, units = 'mm', deflate } = {}) {
   const files = Object.entries(faces).map(([body, named]) => [`${body}.stl`, toAsciiSTL(named, { scale })]);
   const d = fan.derived;
+  const list = Object.entries(faces).map(([body, named]) => `  ${body}: ${named.map(([f]) => f).join(', ')}`);
   files.push(['README.txt', [
     `Units: ${units}. Rotation axis: Z through (0,0,0).`,
     'Positive omega about +Z (right-hand rule) blows air toward +Z (inlet at -Z).',
     `MRF zone: cylinder R=${d.mrfR} mm, z from ${d.mrfZ0} to ${d.mrfZ1} mm.`,
-    'Bodies: flow_static (stationary fluid), flow_rotating (MRF fluid).',
-    'Faces: inlet, outlet, farfield, stator_walls, rotor_walls, mrf_interface.',
+    'Bodies and faces:',
+    ...list,
     'Upload with "Facet split" OFF so each named solid stays one face.',
     '',
   ].join('\n')]);

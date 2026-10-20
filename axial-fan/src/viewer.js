@@ -4,7 +4,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import GUI from 'lil-gui';
 import Module from 'manifold-3d';
 import { DEFAULTS, buildFan } from './fan.js';
-import { DOMAIN_DEFAULTS, buildFlowRegions, flowRegionFaces, simscaleZip } from './simscale.js';
+import { DOMAIN_DEFAULTS, buildFlowRegions, conformalFaces, overlapFaces, simscaleZip } from './simscale.js';
 import { checkMesh, toAsciiSTL, toBinarySTL } from './stl.js';
 import { makeZip } from './zip.js';
 
@@ -143,9 +143,14 @@ const exportActions = {
   mrfPackage() {
     const { units, ...domain } = exportOpts;
     const regions = buildFlowRegions(wasm, fan, domain);
-    download(simscaleZip(fan, flowRegionFaces(regions), { scale: scale(), units }), `simscale_mrf_${units}.zip`, 'application/zip');
-    regions.flowStatic.delete();
-    regions.flowRotating.delete();
+    download(simscaleZip(fan, overlapFaces(regions), { scale: scale(), units }), `simscale_mrf_${units}.zip`, 'application/zip');
+    for (const key of ['zone', 'flowRegion', 'flowStatic', 'flowRotating']) regions[key].delete();
+  },
+  mrfConformal() {
+    const { units, ...domain } = exportOpts;
+    const regions = buildFlowRegions(wasm, fan, domain);
+    download(simscaleZip(fan, conformalFaces(regions), { scale: scale(), units }), `simscale_mrf_conformal_${units}.zip`, 'application/zip');
+    for (const key of ['zone', 'flowRegion', 'flowStatic', 'flowRotating']) regions[key].delete();
   },
   partsPackage() {
     const files = [['rotor', 'rotor'], ['stator', 'stator'], ['mrf_zone', 'mrfZone']]
@@ -218,10 +223,12 @@ fv.add(view, 'rpm', 1, 120, 1).name('Tốc độ xem (rpm)');
 
 const fe = gui.addFolder('Xuất STL cho SimScale');
 fe.add(exportOpts, 'units', ['mm', 'm']).name('Đơn vị');
-fe.add(exportOpts, 'domainRadius', 400, 3000, 10).name('Miền tính: bán kính (mm)');
+fe.add(exportOpts, 'mode', { 'Ống gió (ducted)': 'ducted', 'Không gian tự do': 'free' }).name('Miền tính');
+fe.add(exportOpts, 'domainRadius', 400, 3000, 10).name('Miền tính: bán kính (mm, tự do)');
 fe.add(exportOpts, 'upstream', 300, 5000, 10).name('Miền tính: phía hút (mm)');
 fe.add(exportOpts, 'downstream', 300, 10000, 10).name('Miền tính: phía đẩy (mm)');
 fe.add(exportActions, 'mrfPackage').name('⬇ Gói SimScale MRF (zip)');
+fe.add(exportActions, 'mrfConformal').name('⬇ Gói MRF dự phòng (conformal)');
 fe.add(exportActions, 'partsPackage').name('⬇ Gói chi tiết rắn (zip)');
 fe.add(exportActions, 'assembly').name('⬇ Cả quạt (1 khối)');
 fe.add(exportActions, 'rotor').name('⬇ Rotor');

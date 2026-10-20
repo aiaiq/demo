@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
 import Module from 'manifold-3d';
 import { DEFAULTS, buildFan } from '../src/fan.js';
-import { DOMAIN_DEFAULTS, buildFlowRegions, flowRegionFaces, simscaleZip } from '../src/simscale.js';
+import { DOMAIN_DEFAULTS, buildFlowRegions, conformalFaces, overlapFaces, simscaleZip } from '../src/simscale.js';
 import { checkMesh, parseBinarySTL, toAsciiSTL, toBinarySTL } from '../src/stl.js';
 import { makeZip } from '../src/zip.js';
 
@@ -19,7 +19,7 @@ for (let i = 0; i < args.length; i += 2) {
   const val = args[i + 1];
   if (key in opts) opts[key] = val;
   else if (key in DEFAULTS) params[key] = typeof DEFAULTS[key] === 'boolean' ? val === 'true' : Number(val);
-  else if (key in DOMAIN_DEFAULTS) domain[key] = Number(val);
+  else if (key in DOMAIN_DEFAULTS) domain[key] = typeof DOMAIN_DEFAULTS[key] === 'string' ? val : Number(val);
   else throw new Error(`Unknown option --${key}`);
 }
 const scale = { mm: 1, m: 0.001 }[opts.units];
@@ -71,13 +71,17 @@ writeFileSync(join(opts.out, `simscale_parts_${opts.units}.zip`), makeZip(
   { deflate: deflateRawSync },
 ));
 
-// SimScale ZIP of the two fluid regions with named faces (recommended for MRF).
+// SimScale ZIPs of fluid volumes with named faces: the documented
+// overlapping-zone layout (recommended) and the conformal fallback.
 const regions = buildFlowRegions(wasm, fan, domain);
-const faces = flowRegionFaces(regions);
-writeFileSync(join(opts.out, `simscale_mrf_${opts.units}.zip`), simscaleZip(fan, faces, { scale, units: opts.units, deflate: deflateRawSync }));
+const faces = { ...overlapFaces(regions), ...conformalFaces(regions) };
+const zip = (name, bodies) => writeFileSync(join(opts.out, `${name}_${opts.units}.zip`), simscaleZip(
+  fan, Object.fromEntries(bodies.map((b) => [b, faces[b]])), { scale, units: opts.units, deflate: deflateRawSync }));
+zip('simscale_mrf', ['flow_region', 'rotating_zone']);
+zip('simscale_mrf_conformal', ['flow_static', 'flow_rotating']);
 report.domain = regions.options;
 report.flowRegions = {};
-for (const [name, m] of [['flow_static', regions.flowStatic], ['flow_rotating', regions.flowRotating]]) {
+for (const [name, m] of [['flow_region', regions.flowRegion], ['flow_static', regions.flowStatic], ['flow_rotating', regions.flowRotating]]) {
   const check = checkMesh(m.getMesh());
   // decompose() returns shells; cavities (the fan's walls) come back as
   // negative-volume shells, so only positive shells are separate volumes.
@@ -112,12 +116,15 @@ report.checks = {
   rotor_stator_overlap_mm3: +overlap(parts.rotor, parts.stator).toFixed(6),
   mrfZone_stator_overlap_mm3: +overlap(parts.mrfZone, parts.stator).toFixed(6),
   rotor_outside_mrfZone_mm3: +parts.rotor.subtract(parts.mrfZone).volume().toFixed(6),
+  // the overlapping layout needs the zone fully inside fluid + rotor
+  mrfZone_outside_flow_mm3: +parts.mrfZone.subtract(regions.flowRegion.add(parts.rotor)).volume().toFixed(6),
   rotor_tip_radius_mm: +tipR.toFixed(3),
   tip_clearance_mm: +(d.ductR - tipR).toFixed(3),
 };
 ok &&= report.checks.rotor_stator_overlap_mm3 === 0
   && report.checks.mrfZone_stator_overlap_mm3 === 0
-  && report.checks.rotor_outside_mrfZone_mm3 === 0;
+  && report.checks.rotor_outside_mrfZone_mm3 === 0
+  && report.checks.mrfZone_outside_flow_mm3 === 0;
 
 report.valid = ok;
 writeFileSync(join(opts.out, 'report.json'), JSON.stringify(report, null, 2) + '\n');

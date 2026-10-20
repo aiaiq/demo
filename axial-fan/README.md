@@ -14,11 +14,13 @@ Mô hình 3D tham số của quạt hướng trục lắp bích (vỏ ống + 2 
 
 | File | Nội dung | Dùng khi |
 |---|---|---|
-| **`simscale_mrf_mm.zip`** | 2 vùng **lưu chất** dựng sẵn: `flow_static` (miền tĩnh) và `flow_rotating` (vùng MRF), mặt đã đặt tên | **Khuyên dùng** cho mô phỏng quạt bằng MRF |
+| **`simscale_mrf_mm.zip`** | Khối **không khí** `flow_region` (ống hút → quạt → ống đẩy) + trụ vùng quay `rotating_zone` chồng lên nó, mặt đã đặt tên | **Khuyên dùng** cho MRF. Đây là cách bố trí SimScale hướng dẫn |
+| `simscale_mrf_conformal_mm.zip` | 2 khối không khí tiếp giáp, không chồng nhau: `flow_static` + `flow_rotating`, chung mặt `mrf_interface` | Dự phòng nếu gói trên không chia lưới được |
 | `simscale_parts_mm.zip` | 3 khối **rắn**: `rotor`, `stator`, `mrf_zone` | Khi muốn tự tạo miền lưu chất trong SimScale |
 | `fan_assembly.stl` | Cả quạt là 1 khối rắn (rotor nối stator qua trục) | Mô phỏng nhanh không quay, xem cản dòng |
 | `fan_rotor.stl` / `fan_stator.stl` / `fan_mrf_zone.stl` | Từng chi tiết, binary STL | Dùng trong phần mềm CAD/CFD khác |
 | `report.json` | Kết quả kiểm tra: kín nước, thể tích, genus, bbox, khe hở | Đối chiếu |
+| `m/simscale_mrf_m.zip` | Như gói khuyên dùng nhưng đơn vị **mét** | Khi SimScale không cho chọn đơn vị lúc upload |
 
 **Hệ trục:** trục quay là **Z** đi qua gốc (0,0,0), mặt phẳng giữa cánh nằm ở z = 0. Khi **ω > 0 quanh +Z** (quy tắc bàn tay phải), gió thổi về **+Z**: phía hút ở −Z, phía đẩy ở +Z.
 
@@ -28,37 +30,16 @@ SimScale nhận một ZIP gồm nhiều STL như sau: **mỗi file STL thành 1 
 
 | Khối | Các mặt |
 |---|---|
-| `flow_static` = miền tính − stator − trụ MRF | `inlet` (z = −1500), `outlet` (z = +3000), `farfield` (vỏ trụ R = 900), `stator_walls`, `mrf_interface` |
-| `flow_rotating` = trụ MRF − rotor | `rotor_walls`, `mrf_interface` |
+| `flow_region` = ống Ø500 (z từ −1500 đến +3000) − motor/thanh giằng − rotor | `inlet`, `outlet`, `duct_walls`, `stator_walls`, `rotor_walls` |
+| `rotating_zone` = trụ R = 247.5 mm, z ∈ [−70, 42.5] mm | `rotating_zone` |
 
-Hai khối dùng chung **đúng cùng một bộ tam giác** cho `mrf_interface` (mặt tiếp giáp trùng khớp). Script kiểm tra điều này mỗi lần xuất.
+Mặt trụ của vùng quay nằm giữa khe hở đầu cánh (cánh R = 245, thành ống R = 250). Mặt sau của nó nằm giữa khe rotor–stator (40 → 45 mm).
 
-Vùng MRF là hình trụ R = 247.5 mm, z ∈ [−70, 42.5] mm. Mặt trụ nằm giữa khe hở đầu cánh (cánh R = 245, vỏ R = 250), mặt sau nằm giữa khe rotor–stator (40 → 45 mm).
+Miền tính mặc định là **ống gió** (`--mode ducted`), đúng cách lắp của quạt có bích, nên dựng được cả đường đặc tính. Muốn mô phỏng quạt thổi ra không gian rộng thì dùng `--mode free`. Chế độ này chỉ đúng khi Δp = 0.
 
-## Quy trình trên SimScale (Incompressible + MRF)
+## Mô phỏng trên SimScale
 
-1. **Upload:** *Geometries → Import* rồi chọn `simscale_mrf_mm.zip`.
-   - Đơn vị: **mm**. STL không lưu đơn vị nên phải chọn khi upload. Nếu muốn dùng mét, chạy `npm run export:m`.
-   - **Tắt "Facet split"** để mỗi `solid` giữ nguyên là một mặt có tên.
-   - Sau khi upload, kiểm tra trong cây hình học có 2 khối và các mặt mang tên như bảng trên.
-2. **Tạo simulation:** *Incompressible*, *Steady-state*, turbulence **k-ω SST**, chọn **Internal flow** và vật liệu **Air**.
-3. **Advanced concepts → Rotating zones → MRF rotating zone**
-   - Gán **volume `flow_rotating`**. MRF bắt buộc gán khối, không gán mặt.
-   - Origin `(0, 0, 0)`, axis `(0, 0, 1)`.
-   - Rotational velocity, ví dụ 1400 rpm ≈ **146.6 rad/s**. Giá trị dương thì gió thổi về +Z.
-4. **Boundary conditions**
-   - `inlet`: *Pressure inlet*, total pressure 0 Pa.
-   - `outlet`: *Pressure outlet*, static pressure 0 Pa. Để dựng **đường đặc tính quạt**, chạy lại nhiều lần với áp ra Δp = 0, 50, 100… Pa.
-   - `farfield`: *Wall (slip)* để mô phỏng buồng thử. Nếu muốn mô phỏng quạt đặt trong không gian rộng, đặt *Pressure inlet* 0 Pa.
-   - `rotor_walls`, `stator_walls`: *Wall, no-slip* (mặc định). Rotor tự quay theo vùng MRF.
-5. **Mesh:** *Standard*, độ mịn khoảng 6–7, thêm các refinement sau:
-   - *Region refinement* cho khối `flow_rotating`: khoảng 4 mm.
-   - *Surface refinement* cho `rotor_walls`: khoảng 1.5–2 mm.
-   - Phải có **ít nhất 3–4 ô trong khe đầu cánh 5 mm**, tức cỡ ô ≤ 1–1.25 mm quanh R = 245–250. Có thể tạo một *region refinement* hình trụ rỗng bằng *Geometry primitive*.
-   - *Inflation layers* 3–5 lớp trên `rotor_walls`.
-6. **Result control:** thêm *Area average* / *Flow rate* trên `outlet` để lấy lưu lượng, và *Forces and moments* trên `rotor_walls` (tâm (0,0,0)). Công suất trục P = M_z · ω, hiệu suất η = Q·Δp / P.
-
-Nếu dùng gói `simscale_parts_mm.zip`, upload rồi mở **CAD mode** để tạo flow volume (*Internal/External flow volume*), sau đó lấy `mrf_zone` làm vùng quay. Lưu ý: CAD mode của SimScale hỗ trợ hình dạng dạng lưới (STL) hạn chế hơn so với STEP, nên gói MRF ở trên là cách ổn định hơn.
+👉 **Xem hướng dẫn từng bước: [`docs/SIMSCALE.md`](docs/SIMSCALE.md)**. Hướng dẫn đi từ upload, thiết lập MRF, điều kiện biên, chia lưới, chạy, đến tính Q, Δp, P, η và dựng đường đặc tính.
 
 ## Chạy
 
