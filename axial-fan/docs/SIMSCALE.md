@@ -103,7 +103,7 @@ Phải tạo các mục này **trước khi chạy**. SimScale chỉ ghi số li
 1. **Surface data → Area average**:
    - tên `p_in`, gán mặt đầu hút
    - tên `p_out`, gán mặt đầu đẩy
-2. **Surface data → Volume (flow) rate**:
+2. **Surface data → Area integral** (SimScale không có mục riêng tên "Flow rate"; tích phân vận tốc trên mặt chính là lưu lượng):
    - tên `Q_out`, gán mặt đầu đẩy
    - tên `Q_in`, gán mặt đầu hút (dùng để kiểm tra cân bằng lưu lượng)
 3. **Forces and moments**: đặt tên `rotor`, center `(0, 0, 0)`. Gán **các mặt của cánh và bầu quạt**. Kết quả cho ra **M_z** (mô-men quanh trục quạt). Đây là bước mất công nhất vì các mặt nằm bên trong ống:
@@ -142,7 +142,7 @@ Phải tạo các mục này **trước khi chạy**. SimScale chỉ ghi số li
 
 | Đại lượng | Lấy từ | Công thức |
 |---|---|---|
-| Lưu lượng Q | `Q_out` (m³/s) | Q [m³/h] = Q × 3600 |
+| Lưu lượng Q | `Q_out`: giá trị tích phân của **vận tốc** (m³/s) | Q [m³/h] = Q × 3600 |
 | Độ tăng áp toàn phần Δp_t | `p_out`, `p_in` (dùng **total pressure** nếu có) | Δp_t = p_t,out − p_t,in |
 | Công suất trục P | M_z từ `rotor` | P = \|M_z\| × ω (W) |
 | Hiệu suất | | η = Q × Δp_t / P |
