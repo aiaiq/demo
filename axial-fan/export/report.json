@@ -1,0 +1,200 @@
+{
+  "units": "mm",
+  "axis": "Z",
+  "params": {
+    "ductInnerDiameter": 500,
+    "ductWall": 2,
+    "housingLength": 180,
+    "flangeOuterDiameter": 600,
+    "flangeThickness": 3,
+    "boltHoles": 8,
+    "boltHoleDiameter": 10,
+    "boltCircleDiameter": 560,
+    "terminalBox": true,
+    "bladeCount": 5,
+    "tipClearance": 5,
+    "hubDiameter": 144,
+    "hubLength": 90,
+    "hubBackZ": 40,
+    "rootChord": 95,
+    "tipChord": 185,
+    "rootPitchDeg": 40,
+    "tipPitchDeg": 20,
+    "sweepDeg": -15,
+    "bladeThickness": 3,
+    "camber": 0.05,
+    "motorDiameter": 110,
+    "motorLength": 40,
+    "rotorStatorGap": 5,
+    "strutCount": 4,
+    "strutDiameter": 12,
+    "circularSegments": 160,
+    "bladeChordDivisions": 48,
+    "bladeSpanDivisions": 48
+  },
+  "derived": {
+    "ductR": 250,
+    "hubR": 72,
+    "tipR": 245,
+    "hubFrontZ": -50,
+    "statorFrontZ": 45,
+    "statorBackZ": 85,
+    "housingZ0": -90,
+    "housingZ1": 90,
+    "strutZ": 65,
+    "mrfR": 247.5,
+    "mrfZ0": -70,
+    "mrfZ1": 42.5
+  },
+  "bodies": {
+    "fan_rotor": {
+      "status": "NoError",
+      "genus": 0,
+      "volume_mm3": 1714444.9,
+      "area_mm2": 326639.2,
+      "bbox_mm": {
+        "min": [
+          -244.985,
+          -244.997,
+          -50
+        ],
+        "max": [
+          245,
+          239.063,
+          40
+        ]
+      },
+      "triangles": 53040,
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenerateTriangles": 0,
+      "minTriangleArea": 0.03401571548695883,
+      "watertight": true,
+      "stlFileWatertight": true
+    },
+    "fan_stator": {
+      "status": "NoError",
+      "genus": 20,
+      "volume_mm3": 1817029.9,
+      "area_mm2": 983040.2,
+      "bbox_mm": {
+        "min": [
+          -300,
+          -300,
+          -90
+        ],
+        "max": [
+          300,
+          300,
+          90
+        ]
+      },
+      "triangles": 8530,
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenerateTriangles": 0,
+      "minTriangleArea": 0.04215227545847672,
+      "watertight": true,
+      "stlFileWatertight": true
+    },
+    "fan_assembly": {
+      "status": "NoError",
+      "genus": 20,
+      "volume_mm3": 3533730.3,
+      "area_mm2": 1309154,
+      "bbox_mm": {
+        "min": [
+          -300,
+          -300,
+          -90
+        ],
+        "max": [
+          300,
+          300,
+          90
+        ]
+      },
+      "triangles": 61762,
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenerateTriangles": 0,
+      "minTriangleArea": 0.03401571548695883,
+      "watertight": true,
+      "stlFileWatertight": true
+    },
+    "fan_mrf_zone": {
+      "status": "NoError",
+      "genus": 0,
+      "volume_mm3": 21644181.8,
+      "area_mm2": 559721.7,
+      "bbox_mm": {
+        "min": [
+          -247.5,
+          -247.5,
+          -70
+        ],
+        "max": [
+          247.5,
+          247.5,
+          42.5
+        ]
+      },
+      "triangles": 636,
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenerateTriangles": 0,
+      "minTriangleArea": 1.8540747120277956,
+      "watertight": true,
+      "stlFileWatertight": true
+    }
+  },
+  "checks": {
+    "rotor_stator_overlap_mm3": 0,
+    "mrfZone_stator_overlap_mm3": 0,
+    "rotor_outside_mrfZone_mm3": 0,
+    "rotor_tip_radius_mm": 245,
+    "tip_clearance_mm": 5
+  },
+  "domain": {
+    "domainRadius": 900,
+    "upstream": 1500,
+    "downstream": 3000
+  },
+  "flowRegions": {
+    "flow_static": {
+      "status": "NoError",
+      "connectedVolumes": 1,
+      "volume_mm3": 11424701063.6,
+      "faces": {
+        "stator_walls": 8530,
+        "mrf_interface": 636,
+        "farfield": 320,
+        "inlet": 158,
+        "outlet": 158
+      },
+      "triangles": 9802,
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenerateTriangles": 0,
+      "minTriangleArea": 0.04215227545847672,
+      "watertight": true
+    },
+    "flow_rotating": {
+      "status": "NoError",
+      "connectedVolumes": 1,
+      "volume_mm3": 19929736.9,
+      "faces": {
+        "rotor_walls": 53040,
+        "mrf_interface": 636
+      },
+      "triangles": 53676,
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenerateTriangles": 0,
+      "minTriangleArea": 0.03401571548695883,
+      "watertight": true
+    }
+  },
+  "checks_interface_conformal": true,
+  "valid": true
+}

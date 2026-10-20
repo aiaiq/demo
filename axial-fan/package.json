@@ -1,0 +1,19 @@
+{
+  "name": "axial-fan",
+  "version": "1.0.0",
+  "description": "Parametric axial duct fan (Three.js + manifold-3d) with watertight STL export for SimScale",
+  "scripts": {
+    "export": "node scripts/export.mjs",
+    "export:m": "node scripts/export.mjs --units m --out export/m",
+    "serve": "npx --yes serve ."
+  },
+  "dependencies": {
+    "manifold-3d": "^3.5.4",
+    "three": "^0.186.1"
+  },
+  "type": "module",
+  "devDependencies": {
+    "lil-gui": "^0.20.0"
+  },
+  "private": true
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Axial Fan 3D</title>
+  <style>
+    :root { --bg: #e9edf0; --fg: #1d2329; --panel: rgba(255, 255, 255, 0.92); --ok: #1f7a3a; --bad: #b42318; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #15191c; --fg: #e3e7ea; --panel: rgba(28, 33, 37, 0.92); --ok: #5cc27a; --bad: #ff7b6e; }
+    }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+    canvas { display: block; }
+    #info { position: absolute; left: 12px; bottom: 12px; max-width: min(420px, calc(100vw - 24px)); background: var(--panel); padding: 10px 12px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+    #info h1 { font-size: 14px; margin: 0 0 4px; }
+    #info table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    #info td { padding: 1px 6px 1px 0; }
+    .ok { color: var(--ok); } .bad { color: var(--bad); }
+    #busy { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; pointer-events: none; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+      "manifold-3d": "https://cdn.jsdelivr.net/npm/manifold-3d@3.5.4/manifold.js",
+      "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.20.0/dist/lil-gui.esm.min.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="busy">Đang dựng hình…</div>
+  <div id="info"><h1>Quạt hướng trục Ø500 – SimScale ready</h1><div id="stats"></div></div>
+  <script type="module" src="./src/viewer.js"></script>
+</body>
+</html>
